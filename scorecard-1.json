@@ -1,0 +1,52 @@
+{
+  "iteration": 1,
+  "total": 94,
+  "target": 90,
+  "categories": [
+    {
+      "name": "Functionality & Correctness",
+      "score": 25,
+      "max": 25,
+      "deductions": []
+    },
+    {
+      "name": "Code Quality & Architecture",
+      "score": 18,
+      "max": 20,
+      "deductions": [
+        { "points": 1, "location": "main.js (~700 lines)", "reason": "Still one file for layout, tray, guard, viewer, IPC; splitting into layout.js / tray.js / viewer.js remains the right structure move." },
+        { "points": 1, "location": "types.js vs modules", "reason": "Note/IngestResult typedefs now exist but individual functions in main.js/store.js are still unannotated; the contract lives in one file, not at the call sites." }
+      ]
+    },
+    {
+      "name": "UX & Visual Design",
+      "score": 19,
+      "max": 20,
+      "deductions": [
+        { "points": 1, "location": "note.html #dateInput", "reason": "Deadline editor still swaps to an unstyled native date input that visually clashes with the card." }
+      ]
+    },
+    {
+      "name": "Performance",
+      "score": 14,
+      "max": 15,
+      "deductions": [
+        { "points": 1, "location": "main.js guardTick", "reason": "Edge guard still spawns an osascript subprocess every 1.2s while notes are pinned; event-driven detection isn't possible without native helpers, but the interval could back off when the frontmost app hasn't changed." }
+      ]
+    },
+    {
+      "name": "Accessibility",
+      "score": 8,
+      "max": 10,
+      "deductions": [
+        { "points": 2, "location": "note.js / main.js", "reason": "Still no keyboard operability: no shortcuts for close/done/expand/step, and cards can't be tabbed between." }
+      ]
+    },
+    {
+      "name": "Security & Robustness",
+      "score": 10,
+      "max": 10,
+      "deductions": []
+    }
+  ]
+}

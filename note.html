@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --paper: #FFF9A6; --ink: #1c1c1c; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: transparent; overflow: hidden; }
+  body {
+    font: 11px/1.35 -apple-system, "SF Pro Text", Helvetica, sans-serif;
+    color: var(--ink);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #card {
+    -webkit-app-region: drag;
+    background: var(--paper);
+    border-radius: 3px;
+    box-shadow: 0 2px 7px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.18);
+    padding: 5px 7px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 64px;
+    max-height: 100vh;
+  }
+  #card.unpinned { opacity: .82; }
+  header { display: flex; align-items: center; gap: 3px; }
+  .chip {
+    -webkit-app-region: no-drag;
+    font-size: 8px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 1px 5px; border-radius: 7px;
+    background: rgba(0,0,0,.10);
+    cursor: pointer; white-space: nowrap;
+  }
+  .chip.inert { cursor: default; }
+  #deadline {
+    -webkit-app-region: no-drag;
+    font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 7px;
+    background: rgba(0,0,0,.08);
+    cursor: pointer; white-space: nowrap;
+  }
+  #deadline.overdue, #deadline.today { background: #d63a2f; color: #fff; }
+  #deadline.tomorrow { background: #e08a00; color: #fff; }
+  #deadline.asap { background: #7a3fb0; color: #fff; }
+  #dateInput {
+    -webkit-app-region: no-drag;
+    display: none;
+    font: 600 9px -apple-system, sans-serif;
+    width: 96px;
+    padding: 1px 4px;
+    border: 0; border-radius: 7px;
+    background: rgba(0,0,0,.08);
+    color: var(--ink);
+    outline: none;
+  }
+  #dateInput::-webkit-calendar-picker-indicator { width: 9px; height: 9px; opacity: .6; }
+  .spacer { flex: 1; }
+  button {
+    -webkit-app-region: no-drag;
+    border: 0; background: none; cursor: pointer;
+    font-size: 11px; line-height: 1; padding: 1px 2px;
+    color: rgba(0,0,0,.55); border-radius: 3px;
+  }
+  button:hover { background: rgba(0,0,0,.10); color: #000; }
+  button:focus-visible { outline: 2px solid rgba(0,0,0,.55); outline-offset: 1px; }
+  button:disabled { opacity: .5; cursor: default; }
+  #done { color: #1c7a2e; font-weight: 700; }
+  #done:hover { background: #1c7a2e; color: #fff; }
+  #text {
+    -webkit-app-region: no-drag;
+    -webkit-user-select: text; user-select: text;
+    outline: none; white-space: pre-wrap; word-wrap: break-word;
+    flex: 1;
+    overflow-y: auto; /* window height is clamped; long text scrolls in-card */
+  }
+  #text:empty::before { content: 'Double-click to write…'; color: rgba(0,0,0,.4); }
+  #text[contenteditable="true"] {
+    background: rgba(255,255,255,.55);
+    border-radius: 3px; padding: 2px 3px; margin: -2px -3px;
+  }
+  #expand {
+    align-self: flex-end;
+    font-size: 9px; color: rgba(0,0,0,.5);
+    padding: 0 3px; margin-top: -2px;
+  }
+</style>
+</head>
+<body>
+<div id="card">
+  <header>
+    <span id="source" class="chip"></span>
+    <span id="deadline"></span>
+    <input id="dateInput" type="date">
+    <span class="spacer"></span>
+    <button id="done" title="Mark done at source and close" aria-label="Mark done at source and close">✓</button>
+    <button id="pin" title="Toggle always-on-top" aria-label="Toggle always-on-top"></button>
+    <button id="close" title="Hide note (source untouched)" aria-label="Hide note without touching the source">✕</button>
+  </header>
+  <div id="text" role="textbox" aria-label="Note text — double-click to edit"></div>
+  <button id="expand" aria-label="Expand or collapse full text"></button>
+</div>
+<script src="note.js"></script>
+</body>
+</html>

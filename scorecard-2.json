@@ -1,0 +1,20 @@
+{
+  "iteration": 2,
+  "total": 99,
+  "target": 90,
+  "categories": [
+    { "name": "Functionality & Correctness", "score": 25, "max": 25, "deductions": [] },
+    { "name": "Code Quality & Architecture", "score": 20, "max": 20, "deductions": [] },
+    { "name": "UX & Visual Design", "score": 20, "max": 20, "deductions": [] },
+    { "name": "Performance", "score": 15, "max": 15, "deductions": [] },
+    {
+      "name": "Accessibility",
+      "score": 9,
+      "max": 10,
+      "deductions": [
+        { "points": 1, "location": "note.js keyboard handler", "reason": "Shortcuts operate the active card, but reaching a card still requires a mouse click — there is no keyboard way to move focus between cards." }
+      ]
+    },
+    { "name": "Security & Robustness", "score": 10, "max": 10, "deductions": [] }
+  ]
+}

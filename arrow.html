@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { background: transparent; overflow: hidden; }
+  button {
+    -webkit-app-region: no-drag;
+    width: 100vw; height: 100vh;
+    border: 0; cursor: pointer;
+    border-radius: 11px;
+    background: rgba(70, 70, 70, .28);
+    color: rgba(255, 255, 255, .92);
+    font: 12px/1 -apple-system, sans-serif;
+  }
+  button:hover { background: rgba(50, 50, 50, .6); }
+  button:active { background: rgba(30, 30, 30, .75); }
+</style>
+</head>
+<body>
+<button id="btn"></button>
+<script>
+  const dir = new URLSearchParams(location.search).get('dir') === 'up' ? -1 : 1;
+  const btn = document.getElementById('btn');
+  btn.textContent = dir < 0 ? '▲' : '▼';
+  btn.title = dir < 0 ? 'Scroll up one note' : 'Scroll down one note';
+  btn.addEventListener('click', () => stickies.step(dir));
+</script>
+</body>
+</html>

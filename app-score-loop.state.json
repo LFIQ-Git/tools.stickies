@@ -1,0 +1,258 @@
+{
+  "app": "02-stickies",
+  "target": 90,
+  "max_iter": 5,
+  "plateau_threshold": 2,
+  "rounds": [
+    {
+      "iteration": 0,
+      "total": 78,
+      "target": 90,
+      "categories": [
+        {
+          "name": "Functionality & Correctness",
+          "score": 21,
+          "max": 25,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "main.js:153 createNoteWindow",
+              "reason": "BrowserWindow lacks acceptFirstMouse; first click on an inactive card only activates the window, swallowing button presses (observed live: expand clicks required a second click)."
+            },
+            {
+              "points": 1,
+              "location": "sticks.js:27 databaseUrl / pg connection string",
+              "reason": "Every refresh spams the log with the pg sslmode deprecation warning; main paths are not clean-log."
+            },
+            {
+              "points": 1,
+              "location": "main.js:488 note:height clamp + note.html #text",
+              "reason": "Cards clamp at maxHeight 300 with overflow hidden; expanded text longer than the window is silently truncated with no scroll affordance."
+            },
+            {
+              "points": 1,
+              "location": "main.js:634 app.whenReady",
+              "reason": "No screen.on('display-added'/'display-removed'/'display-metrics-changed') listeners; unplugging or rearranging monitors strands the column until an unrelated relayout fires."
+            }
+          ]
+        },
+        {
+          "name": "Code Quality & Architecture",
+          "score": 14,
+          "max": 20,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "main.js (643 lines)",
+              "reason": "Layout engine, tray menu, edge guard, markdown viewer, and IPC handlers all in one file; approaching god-file."
+            },
+            {
+              "points": 2,
+              "location": "all modules",
+              "reason": "No types or JSDoc anywhere; the note object's shape (14+ optional fields) is implicit across main.js, store.js, ingest.js, note.js."
+            },
+            {
+              "points": 2,
+              "location": "store.js:20 load(); main.js:530 openViewer catch",
+              "reason": "Corrupt store JSON is silently discarded, wiping positions/dismissals with no backup; openViewer's bare catch hides read failures."
+            },
+            {
+              "points": 1,
+              "location": "start.sh; config.json",
+              "reason": "start.sh still documents the retired kill-and-npm-start flow, contradicting the launcher; keychainService/envFile duplicated across three config blocks."
+            }
+          ]
+        },
+        {
+          "name": "UX & Visual Design",
+          "score": 17,
+          "max": 20,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "note.html #dateInput; note.html #text at maxHeight",
+              "reason": "Deadline editor swaps to an unstyled native date input; clipped cards give no visual cue that content continues."
+            },
+            {
+              "points": 2,
+              "location": "main.js refresh(); note.js doneBtn",
+              "reason": "No feedback states: 15-min refresh gives no indicator, and \u2713 on DB-backed cards (1-2s write) shows nothing pending and doesn't guard against double-click."
+            }
+          ]
+        },
+        {
+          "name": "Performance",
+          "score": 11,
+          "max": 15,
+          "deductions": [
+            {
+              "points": 2,
+              "location": "main.js:117 layoutStack \u2192 store.save()",
+              "reason": "Synchronous full-store disk write on every layout pass, including every coalesced wheel tick while scrolling \u2014 hot-path sync I/O."
+            },
+            {
+              "points": 1,
+              "location": "main.js:392 guardTick",
+              "reason": "Spawns an osascript subprocess every 1.2s all day even when the frontmost window hasn't changed."
+            },
+            {
+              "points": 1,
+              "location": "ingest.js ingestAll; sticks.js withClient",
+              "reason": "The three Neon sources each open/close their own connection and run sequentially \u2014 a fetch waterfall that should be parallel."
+            }
+          ]
+        },
+        {
+          "name": "Accessibility",
+          "score": 7,
+          "max": 10,
+          "deductions": [
+            {
+              "points": 2,
+              "location": "note.js / note.html",
+              "reason": "Nothing is keyboard-operable: no shortcuts for close/done/expand, contenteditable region unlabeled, focus never visible."
+            },
+            {
+              "points": 1,
+              "location": "note.html .chip (8px) and button glyphs",
+              "reason": "8px uppercase chips are borderline legible; emoji-only pin/close buttons have title tooltips but no accessible names."
+            }
+          ]
+        },
+        {
+          "name": "Security & Robustness",
+          "score": 8,
+          "max": 10,
+          "deductions": [
+            {
+              "points": 2,
+              "location": "main.js:528 openViewer",
+              "reason": "marked output injected unsanitized into a data: URL with no CSP; script tags in a source markdown file would execute in the viewer window."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 1,
+      "total": 94,
+      "target": 90,
+      "categories": [
+        {
+          "name": "Functionality & Correctness",
+          "score": 25,
+          "max": 25,
+          "deductions": []
+        },
+        {
+          "name": "Code Quality & Architecture",
+          "score": 18,
+          "max": 20,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "main.js (~700 lines)",
+              "reason": "Still one file for layout, tray, guard, viewer, IPC; splitting into layout.js / tray.js / viewer.js remains the right structure move."
+            },
+            {
+              "points": 1,
+              "location": "types.js vs modules",
+              "reason": "Note/IngestResult typedefs now exist but individual functions in main.js/store.js are still unannotated; the contract lives in one file, not at the call sites."
+            }
+          ]
+        },
+        {
+          "name": "UX & Visual Design",
+          "score": 19,
+          "max": 20,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "note.html #dateInput",
+              "reason": "Deadline editor still swaps to an unstyled native date input that visually clashes with the card."
+            }
+          ]
+        },
+        {
+          "name": "Performance",
+          "score": 14,
+          "max": 15,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "main.js guardTick",
+              "reason": "Edge guard still spawns an osascript subprocess every 1.2s while notes are pinned; event-driven detection isn't possible without native helpers, but the interval could back off when the frontmost app hasn't changed."
+            }
+          ]
+        },
+        {
+          "name": "Accessibility",
+          "score": 8,
+          "max": 10,
+          "deductions": [
+            {
+              "points": 2,
+              "location": "note.js / main.js",
+              "reason": "Still no keyboard operability: no shortcuts for close/done/expand/step, and cards can't be tabbed between."
+            }
+          ]
+        },
+        {
+          "name": "Security & Robustness",
+          "score": 10,
+          "max": 10,
+          "deductions": []
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "total": 99,
+      "target": 90,
+      "categories": [
+        {
+          "name": "Functionality & Correctness",
+          "score": 25,
+          "max": 25,
+          "deductions": []
+        },
+        {
+          "name": "Code Quality & Architecture",
+          "score": 20,
+          "max": 20,
+          "deductions": []
+        },
+        {
+          "name": "UX & Visual Design",
+          "score": 20,
+          "max": 20,
+          "deductions": []
+        },
+        {
+          "name": "Performance",
+          "score": 15,
+          "max": 15,
+          "deductions": []
+        },
+        {
+          "name": "Accessibility",
+          "score": 9,
+          "max": 10,
+          "deductions": [
+            {
+              "points": 1,
+              "location": "note.js keyboard handler",
+              "reason": "Shortcuts operate the active card, but reaching a card still requires a mouse click \u2014 there is no keyboard way to move focus between cards."
+            }
+          ]
+        },
+        {
+          "name": "Security & Robustness",
+          "score": 10,
+          "max": 10,
+          "deductions": []
+        }
+      ]
+    }
+  ]
+}

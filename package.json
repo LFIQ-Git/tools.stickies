@@ -1,0 +1,21 @@
+{
+  "name": "stickies",
+  "version": "0.1.0",
+  "description": "Always-on-top post-it notes fed by daily routines",
+  "main": "main.js",
+  "scripts": {
+    "test": "node --test",
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^44.0.0"
+  },
+  "dependencies": {
+    "marked": "^18.0.11",
+    "pg": "^8.23.0"
+  }
+}

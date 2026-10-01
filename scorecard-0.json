@@ -1,0 +1,65 @@
+{
+  "iteration": 0,
+  "total": 78,
+  "target": 90,
+  "categories": [
+    {
+      "name": "Functionality & Correctness",
+      "score": 21,
+      "max": 25,
+      "deductions": [
+        { "points": 1, "location": "main.js:153 createNoteWindow", "reason": "BrowserWindow lacks acceptFirstMouse; first click on an inactive card only activates the window, swallowing button presses (observed live: expand clicks required a second click)." },
+        { "points": 1, "location": "sticks.js:27 databaseUrl / pg connection string", "reason": "Every refresh spams the log with the pg sslmode deprecation warning; main paths are not clean-log." },
+        { "points": 1, "location": "main.js:488 note:height clamp + note.html #text", "reason": "Cards clamp at maxHeight 300 with overflow hidden; expanded text longer than the window is silently truncated with no scroll affordance." },
+        { "points": 1, "location": "main.js:634 app.whenReady", "reason": "No screen.on('display-added'/'display-removed'/'display-metrics-changed') listeners; unplugging or rearranging monitors strands the column until an unrelated relayout fires." }
+      ]
+    },
+    {
+      "name": "Code Quality & Architecture",
+      "score": 14,
+      "max": 20,
+      "deductions": [
+        { "points": 1, "location": "main.js (643 lines)", "reason": "Layout engine, tray menu, edge guard, markdown viewer, and IPC handlers all in one file; approaching god-file." },
+        { "points": 2, "location": "all modules", "reason": "No types or JSDoc anywhere; the note object's shape (14+ optional fields) is implicit across main.js, store.js, ingest.js, note.js." },
+        { "points": 2, "location": "store.js:20 load(); main.js:530 openViewer catch", "reason": "Corrupt store JSON is silently discarded, wiping positions/dismissals with no backup; openViewer's bare catch hides read failures." },
+        { "points": 1, "location": "start.sh; config.json", "reason": "start.sh still documents the retired kill-and-npm-start flow, contradicting the launcher; keychainService/envFile duplicated across three config blocks." }
+      ]
+    },
+    {
+      "name": "UX & Visual Design",
+      "score": 17,
+      "max": 20,
+      "deductions": [
+        { "points": 1, "location": "note.html #dateInput; note.html #text at maxHeight", "reason": "Deadline editor swaps to an unstyled native date input; clipped cards give no visual cue that content continues." },
+        { "points": 2, "location": "main.js refresh(); note.js doneBtn", "reason": "No feedback states: 15-min refresh gives no indicator, and ✓ on DB-backed cards (1-2s write) shows nothing pending and doesn't guard against double-click." }
+      ]
+    },
+    {
+      "name": "Performance",
+      "score": 11,
+      "max": 15,
+      "deductions": [
+        { "points": 2, "location": "main.js:117 layoutStack → store.save()", "reason": "Synchronous full-store disk write on every layout pass, including every coalesced wheel tick while scrolling — hot-path sync I/O." },
+        { "points": 1, "location": "main.js:392 guardTick", "reason": "Spawns an osascript subprocess every 1.2s all day even when the frontmost window hasn't changed." },
+        { "points": 1, "location": "ingest.js ingestAll; sticks.js withClient", "reason": "The three Neon sources each open/close their own connection and run sequentially — a fetch waterfall that should be parallel." }
+      ]
+    },
+    {
+      "name": "Accessibility",
+      "score": 7,
+      "max": 10,
+      "deductions": [
+        { "points": 2, "location": "note.js / note.html", "reason": "Nothing is keyboard-operable: no shortcuts for close/done/expand, contenteditable region unlabeled, focus never visible." },
+        { "points": 1, "location": "note.html .chip (8px) and button glyphs", "reason": "8px uppercase chips are borderline legible; emoji-only pin/close buttons have title tooltips but no accessible names." }
+      ]
+    },
+    {
+      "name": "Security & Robustness",
+      "score": 8,
+      "max": 10,
+      "deductions": [
+        { "points": 2, "location": "main.js:528 openViewer", "reason": "marked output injected unsanitized into a data: URL with no CSP; script tags in a source markdown file would execute in the viewer window." }
+      ]
+    }
+  ]
+}
