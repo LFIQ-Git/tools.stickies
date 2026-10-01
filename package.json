@@ -1,21 +1,112 @@
 {
   "name": "stickies",
-  "version": "0.1.0",
-  "description": "Always-on-top post-it notes fed by daily routines",
+  "version": "1.0.0",
+  "description": "Always-on-top sticky notes for today's to-dos, pulled from your calendar, Todoist, Apple Reminders, Markdown checklists and todo.txt.",
   "main": "main.js",
   "scripts": {
-    "test": "node --test",
-    "start": "electron ."
+    "test": "node --test test/*.test.js private/*.test.js",
+    "test:generic": "node --test test/*.test.js",
+    "start": "electron .",
+    "icons": "python3 scripts/make-icons.py",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist": "electron-builder --mac --win --publish never",
+    "release": "bash scripts/release.sh"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": {
+    "name": "Left Field Investments LLC",
+    "email": "justin@leftfieldinv.com"
+  },
+  "license": "UNLICENSED",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^44.0.0"
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "pg": "^8.23.0",
+    "wrangler": "^4.146.0"
   },
   "dependencies": {
-    "marked": "^18.0.11",
-    "pg": "^8.23.0"
+    "marked": "^18.0.11"
+  },
+  "productName": "Stickies",
+  "homepage": "https://stickies.lfiq.app",
+  "private": true,
+  "build": {
+    "appId": "app.lfiq.stickies",
+    "productName": "Stickies",
+    "copyright": "Copyright © 2026 Left Field Investments LLC",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "store.js",
+      "secrets.js",
+      "layout.js",
+      "guard.js",
+      "viewer.js",
+      "settings.js",
+      "settings.html",
+      "settings-page.js",
+      "preload.js",
+      "preload-settings.js",
+      "note.html",
+      "note.js",
+      "arrow.html",
+      "types.js",
+      "config.json",
+      "OVERVIEW.md",
+      "connectors/**",
+      "assets/**",
+      "package.json"
+    ],
+    "asarUnpack": [],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "artifactName": "Stickies-${version}-mac-${arch}.${ext}",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAppleEventsUsageDescription": "Stickies reads and completes your reminders in the Reminders app, and can keep app windows from covering your notes."
+      },
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Stickies ${version}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "Stickies-${version}-windows-x64-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "shortcutName": "Stickies"
+    }
   }
 }

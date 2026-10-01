@@ -1,14 +1,16 @@
 // JSON persistence for notes, positions, and dismissals.
-// Lives in Electron userData so the app works even if the SSD is unmounted.
+// Lives in Electron userData, so the app works when a source is unreachable.
 // Note shapes are documented in types.js.
 const fs = require('fs');
 const path = require('path');
 
 const DISMISS_RETENTION_DAYS = 45;
 
-function todayPT() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-}
+const { todayLocal } = require('./connectors/util');
+
+// Fields the user owns or the layout owns; a refresh never overwrites them.
+const KEEP_ON_REFRESH = new Set(['text', 'summary', 'deadline', 'kind', 'pos', 'pinned', 'userMoved',
+  'userEdited', 'userDeadline', 'createdDate', 'startEditing']);
 
 class Store {
   constructor(userDataDir) {
@@ -56,10 +58,9 @@ class Store {
       // Never clobber user edits; refresh source text only if untouched.
       if (!existing.userEdited) { existing.text = note.text; existing.summary = note.summary; }
       if (!existing.userDeadline) existing.deadline = note.deadline;
-      existing.sourceFile = note.sourceFile;
-      existing.raw = note.raw;
-      existing.dataFile = note.dataFile;
-      existing.taxItemId = note.taxItemId;
+      if (!existing.userDeadline) existing.kind = note.kind;
+      // Connector bookkeeping (source file, external id, raw line) follows the source.
+      for (const [k, v] of Object.entries(note)) if (!KEEP_ON_REFRESH.has(k)) existing[k] = v;
       return existing;
     }
     this.data.notes[note.id] = note;
@@ -67,14 +68,13 @@ class Store {
   }
 
   /**
-   * Remove the note and remember its id so re-ingest skips it. Tax/sticks ids
-   * are stable, so their dismissals persist; primer/kit ids are date-scoped
-   * and reset daily.
+   * Remove the note and remember its id so re-ingest skips it. Ids from
+   * stable sources keep the dismissal; date-scoped ids reset daily.
    * @param {string} id
    */
   dismiss(id) {
     delete this.data.notes[id];
-    this.data.dismissed[id] = todayPT();
+    this.data.dismissed[id] = todayLocal();
     this.prune();
     this.save();
   }
@@ -82,8 +82,8 @@ class Store {
   /** @param {string} id */
   isDismissed(id) { return !!this.data.dismissed[id]; }
 
-  // "Done at source" suppression for primer/kit items, whose ids are
-  // date-scoped: the same open task re-surfaces daily with a new id, so we
+  // "Done at source" suppression for connectors with date-scoped ids
+  // (suppressByContent): the same open task re-surfaces daily with a new id, so we
   // match on content. Word-set Jaccard absorbs day-to-day drift like
   // "now 3 days overdue" → "now 4 days overdue".
   static wordSet(text) {
@@ -91,12 +91,12 @@ class Store {
   }
 
   /**
-   * Record a primer/kit item as done-at-source so tomorrow's regenerated
+   * Record a date-scoped item as done-at-source so tomorrow's regenerated
    * board (new ids, drifted wording) doesn't resurrect it.
    * @param {string} text the note's full text at close time
    */
   addCompleted(text) {
-    this.data.completed.push({ text, date: todayPT() });
+    this.data.completed.push({ text, date: todayLocal() });
     this.save();
   }
 
@@ -118,7 +118,7 @@ class Store {
   }
 
   undismissToday() {
-    const today = todayPT();
+    const today = todayLocal();
     const revived = [];
     for (const [id, date] of Object.entries(this.data.dismissed)) {
       if (date === today) { delete this.data.dismissed[id]; revived.push(id); }
@@ -127,18 +127,20 @@ class Store {
     return revived;
   }
 
-  prune() {
+  /** @param {Object<string, number>} [expireDays] source -> max age of untouched cards */
+  prune(expireDays = this.expireDays || {}) {
     const cutoff = Date.now() - DISMISS_RETENTION_DAYS * 86400000;
     for (const [id, date] of Object.entries(this.data.dismissed)) {
       if (new Date(date).getTime() < cutoff) delete this.data.dismissed[id];
     }
     this.data.completed = this.data.completed.filter(c => new Date(c.date).getTime() >= Date.now() - 90 * 86400000);
-    // Drop stale daily-scoped notes (primer/kit) older than 3 days that the
-    // user never touched — yesterday's board shouldn't linger forever.
+    // Daily-scoped cards the user never touched expire (connector expireDays),
+    // so yesterday's board doesn't linger forever.
     for (const [id, n] of Object.entries(this.data.notes)) {
-      if ((n.source === 'primer' || n.source === 'kit') && !n.userEdited) {
+      const days = expireDays[n.source];
+      if (days && !n.userEdited) {
         const age = Date.now() - new Date(n.createdDate).getTime();
-        if (age > 3 * 86400000) delete this.data.notes[id];
+        if (age > days * 86400000) delete this.data.notes[id];
       }
     }
   }

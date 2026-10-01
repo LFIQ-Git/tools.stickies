@@ -1,0 +1,16 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "stickies-downloads",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-20",
+  // Left Field Investments account (same as apps-launcher).
+  "account_id": "c16c7246ee0a89e6deafe19a74480c6a",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "stickies.lfiq.app", "custom_domain": true }],
+  // Installers are 100+ MB, past the static-asset size limit, so they live in
+  // R2. scripts/release.sh uploads them and writes latest.json.
+  "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "stickies-releases" }],
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "observability": { "enabled": true }
+}

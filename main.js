@@ -1,45 +1,108 @@
 // Stickies main process: note windows, tray, refresh pipeline, IPC.
-// The column layout engine lives in layout.js, the edge guard in guard.js,
-// the markdown viewer in viewer.js; note shapes are documented in types.js.
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, dialog } = require('electron');
+// Sources are connectors (connectors/index.js documents the contract); the
+// column layout engine lives in layout.js, the macOS edge guard in guard.js,
+// the markdown viewer in viewer.js, the Settings window in settings.js.
+const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, dialog, shell } = require('electron');
 const path = require('path');
-const fs = require('fs');
 const Store = require('./store');
-const { ingestAll, todayPT, daysUntil, SOURCES } = require('./ingest');
-const { closeSticksTask, fulfillCommitment, dismissAgentFeedItem } = require('./sticks');
+const { loadConnectors, resolveConfig } = require('./connectors');
+const { todayLocal, daysUntil } = require('./connectors/util');
+const { unsealSettings } = require('./secrets');
 const { createColumn } = require('./layout');
 const { createGuard } = require('./guard');
 const { openViewer } = require('./viewer');
+const { openSettings, registerSettingsIpc } = require('./settings');
 const config = require('./config.json');
+
+const IS_MAC = process.platform === 'darwin';
+const INGEST_TIMEOUT_MS = 45000;
 
 let store;
 let tray;
+/** @type {{list: object[], byKey: Map<string, object>, errors: string[]}} */
+let registry = { list: [], byKey: new Map(), errors: [] };
 /** @type {Map<string, Electron.BrowserWindow>} note id -> window */
 const wins = new Map();
 let lastIngestErrors = [];
+let refreshTimer;
 
 const NOTE = config.note;
 
-/** Display order for the column: source rank, then stable id. */
+// ---- settings ----
+
+function settings() {
+  store.data.settings = store.data.settings || {};
+  return store.data.settings;
+}
+
+function savedFor(key) {
+  const s = settings();
+  s.connectors = s.connectors || {};
+  return s.connectors[key] || {};
+}
+
+function connectorEnabled(c) {
+  if (c.key === 'manual') return true;
+  const v = savedFor(c.key).enabled;
+  return v === undefined ? !!c.defaultEnabled : v;
+}
+
+/** Effective config for a connector: defaults + saved settings, secrets decrypted. */
+function cfgFor(c) {
+  return resolveConfig(c, unsealSettings(c, savedFor(c.key)));
+}
+
+function refreshMinutes() {
+  return Number(settings().refreshMinutes) || config.refreshMinutes;
+}
+
+/** Folders that extra connectors load from. */
+function extraConnectorDirs() {
+  const dirs = [];
+  // A source checkout may carry private connectors; the packaged app never does.
+  if (!app.isPackaged) dirs.push(path.join(__dirname, 'private'));
+  if (settings().customConnectorDir) dirs.push(settings().customConnectorDir);
+  return dirs;
+}
+
+function reloadConnectors() {
+  registry = loadConnectors({ extraDirs: extraConnectorDirs() });
+  store.expireDays = Object.fromEntries(registry.list.filter(c => c.expireDays).map(c => [c.key, c.expireDays]));
+}
+
+// Pre-connector stores kept toggles in settings.sources and windows in
+// settings.sourceWindows; fold them into settings.connectors once.
+function migrateSettings() {
+  const s = settings();
+  if (!s.sources && !s.sourceWindows) return;
+  s.connectors = s.connectors || {};
+  for (const [key, on] of Object.entries(s.sources || {})) {
+    s.connectors[key] = { ...(s.connectors[key] || {}), enabled: on };
+  }
+  for (const [key, days] of Object.entries(s.sourceWindows || {})) {
+    const c = registry.byKey.get(key);
+    if (c?.window) s.connectors[key] = { ...(s.connectors[key] || {}), [c.window.field]: days };
+  }
+  delete s.sources;
+  delete s.sourceWindows;
+  store.save();
+}
+
+/** Display order for the column: connector order, then start time / id. */
 function notesOrdered() {
-  const order = { tax: 0, cal: 1, sticks: 2, commit: 3, feed: 4, primer: 5, kit: 6, manual: 7 };
+  const rank = key => registry.byKey.get(key)?.order ?? 900;
   return Object.values(store.notes).sort((a, b) => {
-    const s = (order[a.source] ?? 9) - (order[b.source] ?? 9);
-    return s !== 0 ? s : a.id.localeCompare(b.id);
+    const s = rank(a.source) - rank(b.source);
+    if (s !== 0) return s;
+    const t = (a.sortKey ?? 0) - (b.sortKey ?? 0);
+    return t !== 0 ? t : a.id.localeCompare(b.id);
   });
 }
 
 const column = createColumn({ note: NOTE, wins, notesOrdered });
 
-// ---- settings ----
-
-function sourceEnabled(key) {
-  return store.data.settings?.sources?.[key] !== false;
-}
-
 // Date filter: cards whose deadline is more than N days ahead are hidden.
-// Past due and today always show; undated cards have nothing to filter on
-// and always show. null = no limit.
+// Past due and today always show; undated cards always show. null = no limit.
 const LOOKAHEAD_CHOICES = [
   { label: 'Today + past due only', value: 0 },
   { label: 'Next 1 day', value: 1 },
@@ -51,7 +114,7 @@ const LOOKAHEAD_CHOICES = [
 ];
 
 function lookAheadDays() {
-  const v = store.data.settings?.lookAheadDays;
+  const v = settings().lookAheadDays;
   return v === undefined ? null : v;
 }
 
@@ -62,30 +125,20 @@ function noteVisible(n) {
   return daysUntil(n.deadline) <= la;
 }
 
-// Per-source ingest windows (how far ahead each feed even fetches), surfaced
-// in the tray and persisted as overrides on top of config.json defaults.
-const SOURCE_WINDOWS = [
-  { key: 'tax',    label: 'Tax deadlines',  configKey: 'includeDueWithinDays', choices: [7, 14, 30, 60, 90] },
-  { key: 'sticks', label: 'Sticks tasks',   configKey: 'dueWithinDays',        choices: [3, 7, 14, 30] },
-  { key: 'commit', label: 'Commitments',    configKey: 'dueWithinDays',        choices: [7, 14, 30] },
-  { key: 'feed',   label: 'Alerts max age', configKey: 'maxAgeDays',           choices: [1, 3, 7, 14] },
-];
-
-function sourceWindow(sw) {
-  return store.data.settings?.sourceWindows?.[sw.key] ?? config[sw.key][sw.configKey];
+/** The note plus what the renderer needs from its connector. */
+function forRenderer(n) {
+  const c = registry.byKey.get(n.source);
+  return {
+    ...n,
+    color: c?.color || '#C9F2C7',
+    chip: c?.chip || n.source,
+    canDone: n.source === 'manual' || !!c?.done,
+    hasSource: !!(n.sourceFile || n.sourceUrl),
+  };
 }
 
-/** Shared DB credentials live once in config.db; per-source blocks add knobs. */
-function dbConfig(key) {
-  return { ...config.db, ...config[key] };
-}
-
-/** config.json defaults + shared db block + tray window overrides. */
-function effectiveConfig() {
-  const cfg = JSON.parse(JSON.stringify(config));
-  for (const key of ['sticks', 'commit', 'feed', 'cal']) cfg[key] = { ...cfg.db, ...cfg[key] };
-  for (const sw of SOURCE_WINDOWS) cfg[sw.key][sw.configKey] = sourceWindow(sw);
-  return cfg;
+function sendNote(win, n) {
+  if (n && win && !win.isDestroyed()) win.webContents.send('note:data', forRenderer(n));
 }
 
 // ---- note windows ----
@@ -120,7 +173,7 @@ function createNoteWindow(note) {
   });
   win.noteId = note.id;
   applyPinState(win, note.pinned);
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (IS_MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.loadFile(path.join(__dirname, 'note.html'));
 
   let moveTimer;
@@ -161,86 +214,103 @@ function syncWindows() {
 
 // ---- refresh pipeline ----
 
+function withTimeout(promise, ms, label) {
+  let t;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => { t = setTimeout(() => reject(new Error(`${label} timed out`)), ms); }),
+  ]).finally(() => clearTimeout(t));
+}
+
+/** Run every enabled connector concurrently; one failing never blocks the rest. */
+async function ingestAll() {
+  const active = registry.list.filter(c => c.key !== 'manual' && connectorEnabled(c));
+  const ctx = { store, todayLocal };
+  const results = await Promise.all(active.map(async c => {
+    try {
+      const r = await withTimeout(Promise.resolve(c.ingest(cfgFor(c), ctx)), INGEST_TIMEOUT_MS, c.label);
+      return { c, notes: (r?.notes || []).map(n => ({ ...n, source: c.key })), error: r?.error };
+    } catch (e) {
+      return { c, notes: [], error: e.message };
+    }
+  }));
+  return results;
+}
+
 let refreshing = false;
 async function refresh() {
   if (refreshing) return;
   refreshing = true;
-  if (tray) tray.setTitle('⟳'); // visible refresh-in-progress indicator
+  setTrayBusy(true);
   try { await doRefresh(); }
+  catch (e) { console.error('[refresh]', e); }
   finally {
     refreshing = false;
-    if (tray) tray.setTitle('🗒');
+    setTrayBusy(false);
   }
 }
 
 async function doRefresh() {
-  const enabled = {};
-  for (const key of Object.keys(SOURCES)) enabled[key] = sourceEnabled(key);
-  const { notes, errors } = await ingestAll(effectiveConfig(), enabled);
-  lastIngestErrors = errors;
-  // The same item often appears in several feeds. Sticks, commitments and the
-  // agent feed are the most derivative surfaces, so drop their notes that
-  // fuzzy-match a primary source (tax, primer, kit) or each other.
-  const DERIVATIVE = new Set(['sticks', 'commit', 'feed']);
+  const results = await ingestAll();
+  lastIngestErrors = [
+    ...registry.errors.map(e => `connector load: ${e}`),
+    ...results.filter(r => r.error).map(r => `${r.c.label}: ${r.error}`),
+  ];
+
+  // The same item often shows up in several feeds. Derivative connectors drop
+  // notes that fuzzy-match anything kept before them (connector order).
   const kept = [];
-  const deduped = [];
-  for (const n of notes) {
-    if (!DERIVATIVE.has(n.source)) { kept.push(n); deduped.push(n); continue; }
-    const a = Store.wordSet(n.summary || n.text);
-    const dup = kept.some(o => {
-      // Feed cards never fuzzy-match each other: agent_feed titles are
-      // templated ("Close task from email to <person>?"), so the shared
-      // boilerplate alone clears the threshold and two different people's
-      // alerts collapse into one card. Repeats within the feed are already
-      // handled upstream by the family key.
-      if (n.source === 'feed' && o.source === 'feed') return false;
-      const b = Store.wordSet(o.text);
-      let inter = 0;
-      for (const w of a) if (b.has(w)) inter++;
-      return a.size > 0 && inter / Math.min(a.size, b.size || 1) >= 0.6;
-    });
-    if (!dup) { kept.push(n); deduped.push(n); }
+  for (const { c, notes } of results) {
+    for (const n of notes) {
+      if (c.derivative) {
+        const a = Store.wordSet(n.summary || n.text);
+        const dup = kept.some(o => {
+          if (c.dedupeWithinSource === false && o.source === n.source) return false;
+          const b = Store.wordSet(o.text);
+          let inter = 0;
+          for (const w of a) if (b.has(w)) inter++;
+          return a.size > 0 && inter / Math.min(a.size, b.size || 1) >= 0.6;
+        });
+        if (dup) continue;
+      }
+      kept.push(n);
+    }
   }
-  for (const n of deduped) {
+  for (const n of kept) {
     if (store.isDismissed(n.id)) continue;
-    if (['primer', 'kit'].includes(n.source) && store.isCompleted(n.text)) continue;
+    if (registry.byKey.get(n.source)?.suppressByContent && store.isCompleted(n.text)) continue;
     store.upsert(n);
   }
-  // Narrowing a source window retro-removes cards beyond it (user-edited stay).
-  const forwardWindows = { tax: sourceWindow(SOURCE_WINDOWS[0]), sticks: sourceWindow(SOURCE_WINDOWS[1]), commit: sourceWindow(SOURCE_WINDOWS[2]) };
+
+  // Live connectors: a card missing from a clean refresh was closed elsewhere
+  // or is over. Skipped when that connector errored, so an outage never wipes
+  // the board.
+  const seen = new Set(kept.map(n => n.id));
+  const cleanLive = new Set(results.filter(r => r.c.live && !r.error).map(r => r.c.key));
+  // Narrowing a look-ahead window retro-removes cards beyond it.
+  const windowOf = new Map(registry.list
+    .filter(c => c.window && c.window.retroRemove !== false)
+    .map(c => [c.key, cfgFor(c)[c.window.field]]));
+
   for (const [id, n] of Object.entries(store.notes)) {
-    const w = forwardWindows[n.source];
-    if (w != null && n.deadline && !n.userEdited && daysUntil(n.deadline) > w) {
-      delete store.notes[id];
-    }
-  }
-  // Feed cards are grouped now (`feed:<group-hash>:<date>`); one-row cards left
-  // from the old `feed:<uuid>` ids can never be re-ingested, so drop them and
-  // let the grouped card take over.
-  for (const [id, n] of Object.entries(store.notes)) {
-    if (n.source === 'feed' && !n.feedIds && !n.userEdited) delete store.notes[id];
-  }
-  // Calendar cards track the live day: ended or removed meetings drop off.
-  const calIds = new Set(deduped.filter(n => n.source === 'cal').map(n => n.id));
-  for (const [id, n] of Object.entries(store.notes)) {
-    if (n.source === 'cal' && !n.userEdited && !calIds.has(id) && sourceEnabled('cal')) {
-      delete store.notes[id];
-    }
-  }
-  // A source toggled off takes its cards down with it (manual and user-edited stay).
-  for (const [id, n] of Object.entries(store.notes)) {
-    if (n.source !== 'manual' && enabled[n.source] === false && !n.userEdited) {
-      delete store.notes[id];
-    }
+    if (n.source === 'manual' || n.userEdited) continue;
+    const c = registry.byKey.get(n.source);
+    // Turned off, or no longer installed: its cards go with it.
+    if (!c || !connectorEnabled(c)) { delete store.notes[id]; continue; }
+    if (cleanLive.has(n.source) && !seen.has(id)) { delete store.notes[id]; continue; }
+    const w = windowOf.get(n.source);
+    if (w != null && n.deadline && daysUntil(n.deadline) > w) delete store.notes[id];
   }
   store.prune();
   store.save();
   syncWindows();
-  for (const [id, win] of wins) {
-    const n = store.notes[id];
-    if (n && !win.isDestroyed()) win.webContents.send('note:data', n);
-  }
+  for (const [id, win] of wins) sendNote(win, store.notes[id]);
   buildTray();
+}
+
+function scheduleRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(refresh, refreshMinutes() * 60 * 1000);
 }
 
 function newManualNote() {
@@ -251,7 +321,7 @@ function newManualNote() {
     text: '',
     deadline: null,
     sourceFile: null,
-    createdDate: todayPT(),
+    createdDate: todayLocal(),
     userEdited: true,
     startEditing: true,
   };
@@ -264,14 +334,14 @@ function setAllPinned(pinned) {
     const n = store.notes[id];
     if (n) n.pinned = pinned;
     applyPinState(win, pinned);
-    if (!win.isDestroyed()) win.webContents.send('note:data', store.notes[id]);
+    sendNote(win, n);
   }
   store.save();
 }
 
-// ---- edge guard ----
+// ---- edge guard (macOS only: it scripts other apps via Accessibility) ----
 
-function edgeGuardEnabled() { return store.data.settings?.edgeGuard !== false; }
+function edgeGuardEnabled() { return IS_MAC && settings().edgeGuard !== false; }
 
 const guard = createGuard({
   isActive: () => {
@@ -290,62 +360,82 @@ const guard = createGuard({
 
 // ---- tray ----
 
+function trayImage() {
+  if (IS_MAC) return nativeImage.createEmpty(); // the menu bar shows the 🗒 title instead
+  return nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
+}
+
+function setTrayBusy(busy) {
+  if (!tray) return;
+  if (IS_MAC) tray.setTitle(busy ? '⟳' : '🗒');
+  tray.setToolTip(busy ? 'Stickies: refreshing…' : 'Stickies');
+}
+
+function updateSetting(key, value) {
+  settings()[key] = value;
+  store.save();
+}
+
+function setConnectorValue(key, field, value) {
+  const s = settings();
+  s.connectors = s.connectors || {};
+  s.connectors[key] = { ...(s.connectors[key] || {}), [field]: value };
+  store.save();
+}
+
 function buildTray() {
   if (!tray) {
-    tray = new Tray(nativeImage.createEmpty());
-    tray.setTitle('🗒');
+    tray = new Tray(trayImage());
+    setTrayBusy(false);
+    // Windows opens tray menus on right-click only; make left-click work too.
+    if (!IS_MAC) tray.on('click', () => tray.popUpContextMenu());
   }
   const count = Object.keys(store.notes).length;
-  const errLines = lastIngestErrors.map(e => ({ label: `⚠ ${e}`, enabled: false }));
+  const errLines = lastIngestErrors.map(e => ({ label: `⚠ ${e}`.slice(0, 110), enabled: false }));
   const guardError = guard.getError();
   if (guardError && /assistive|not allowed|1002|1743/i.test(guardError)) {
-    errLines.push({ label: '⚠ Edge guard needs Accessibility + Automation for Electron', enabled: false });
+    errLines.push({ label: '⚠ Edge guard needs Accessibility + Automation for Stickies', enabled: false });
     errLines.push({ label: '   (System Settings → Privacy & Security)', enabled: false });
   }
-  tray.setContextMenu(Menu.buildFromTemplate([
+  const sources = registry.list.filter(c => c.key !== 'manual');
+  const windowed = sources.filter(c => c.window && connectorEnabled(c));
+  const template = [
     { label: `${count} note${count === 1 ? '' : 's'}`, enabled: false },
     ...errLines,
     { type: 'separator' },
-    { label: 'Refresh from routines', click: refresh },
-    { label: 'Sources', submenu: Object.entries(SOURCES).map(([key, src]) => ({
-      label: src.label,
-      type: 'checkbox',
-      checked: sourceEnabled(key),
-      click: item => {
-        store.data.settings = store.data.settings || {};
-        store.data.settings.sources = store.data.settings.sources || {};
-        store.data.settings.sources[key] = item.checked;
-        store.save();
-        refresh();
-      },
-    })) },
+    { label: 'Refresh now', click: refresh },
     { label: 'New note', click: newManualNote },
-    { label: 'Source look-ahead', submenu: SOURCE_WINDOWS.map(sw => ({
-      label: `${sw.label} — ${sourceWindow(sw)}d`,
-      submenu: sw.choices.map(days => ({
-        label: `${days} days${days === config[sw.key][sw.configKey] ? ' (default)' : ''}`,
-        type: 'radio',
-        checked: sourceWindow(sw) === days,
-        click: () => {
-          store.data.settings = store.data.settings || {};
-          store.data.settings.sourceWindows = store.data.settings.sourceWindows || {};
-          store.data.settings.sourceWindows[sw.key] = days;
-          store.save();
-          refresh();
-        },
+    { label: 'Sources', submenu: [
+      ...sources.map(c => ({
+        label: c.label,
+        type: 'checkbox',
+        checked: connectorEnabled(c),
+        click: item => { setConnectorValue(c.key, 'enabled', item.checked); refresh(); },
       })),
-    })) },
+      { type: 'separator' },
+      { label: 'Connect sources…', click: () => openSettings() },
+    ] },
+  ];
+  if (windowed.length) {
+    template.push({ label: 'Source look-ahead', submenu: windowed.map(c => {
+      const current = cfgFor(c)[c.window.field];
+      return {
+        label: `${c.window.label} — ${current}d`,
+        submenu: c.window.choices.map(days => ({
+          label: `${days === 0 ? 'Today only' : `${days} days`}${days === c.window.default ? ' (default)' : ''}`,
+          type: 'radio',
+          checked: current === days,
+          click: () => { setConnectorValue(c.key, c.window.field, days); refresh(); },
+        })),
+      };
+    }) });
+  }
+  template.push(
     { label: 'Date filter', submenu: LOOKAHEAD_CHOICES.map(c => ({
       label: c.label,
       type: 'radio',
       checked: lookAheadDays() === c.value,
-      click: () => {
-        store.data.settings = store.data.settings || {};
-        store.data.settings.lookAheadDays = c.value;
-        store.save();
-        syncWindows();
-        buildTray();
-      },
+      click: () => { updateSetting('lookAheadDays', c.value); syncWindows(); buildTray(); },
     })) },
     { type: 'separator' },
     { label: 'Pin all on top', click: () => setAllPinned(true) },
@@ -355,28 +445,34 @@ function buildTray() {
       column.resetScroll();
       column.layoutStack();
     } },
-    { label: 'Snap stops at column (edge guard)', type: 'checkbox', checked: edgeGuardEnabled(), click: item => {
-      store.data.settings = store.data.settings || {};
-      store.data.settings.edgeGuard = item.checked;
-      store.save();
-    } },
-    { label: 'Reopen notes closed today', click: () => { store.undismissToday(); refresh(); } },
-    { type: 'separator' },
-    { label: 'App overview', click: () => openViewer(path.join(__dirname, 'OVERVIEW.md')) },
-    { label: 'Quit Stickies', click: () => app.quit() },
-  ]));
+  );
+  if (IS_MAC) {
+    template.push({ label: 'Snap windows at column (edge guard)', type: 'checkbox', checked: edgeGuardEnabled(),
+      click: item => updateSetting('edgeGuard', item.checked) });
+  }
+  template.push({ label: 'Reopen notes closed today', click: () => { store.undismissToday(); refresh(); } });
+  template.push({ type: 'separator' });
+  if (app.isPackaged) {
+    template.push({ label: 'Start at login', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin,
+      click: item => app.setLoginItemSettings({ openAtLogin: item.checked }) });
+  }
+  template.push(
+    { label: 'Settings…', click: () => openSettings() },
+    { label: 'How Stickies works', click: () => openViewer(path.join(__dirname, 'OVERVIEW.md')) },
+    { label: `Quit Stickies${app.isPackaged ? '' : ' (dev)'}`, click: () => app.quit() },
+  );
+  tray.setContextMenu(Menu.buildFromTemplate(template));
 }
 
 // ---- IPC ----
 
 ipcMain.on('note:ready', e => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const n = store.notes[win.noteId];
-  if (n) e.sender.send('note:data', n);
+  sendNote(win, store.notes[win.noteId]);
 });
 ipcMain.on('note:height', (e, h) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  if (win.isDestroyed()) return;
+  if (!win || win.isDestroyed()) return;
   const clamped = Math.max(NOTE.minHeight, Math.min(NOTE.maxHeight, Math.ceil(h)));
   if (win.getContentSize()[1] !== clamped) {
     win.setContentSize(NOTE.width, clamped);
@@ -397,8 +493,7 @@ ipcMain.on('note:deadline', (e, { id, deadline }) => {
   n.deadline = deadline || null;
   n.userDeadline = true;
   store.save();
-  const win = wins.get(id);
-  if (win && !win.isDestroyed()) win.webContents.send('note:data', n);
+  sendNote(wins.get(id), n);
 });
 ipcMain.on('note:close', (e, id) => {
   store.dismiss(id);
@@ -417,58 +512,27 @@ ipcMain.on('note:pin', (e, { id, pinned }) => {
 });
 ipcMain.on('note:openSource', (e, id) => {
   const n = store.notes[id];
-  if (n && n.sourceFile) openViewer(n.sourceFile);
+  if (!n) return;
+  if (n.sourceUrl && /^https:\/\//.test(n.sourceUrl)) shell.openExternal(n.sourceUrl);
+  else if (n.sourceFile) openViewer(n.sourceFile);
 });
 ipcMain.on('column:scroll', (e, dy) => column.scrollBy(dy));
 ipcMain.on('column:step', (e, dir) => column.stepColumn(dir));
 
-// Mark the item done AT THE SOURCE, then close the note. Per-source behavior
-// is documented in OVERVIEW.md; failures resend note:data so the renderer's
-// pending state resets and the card stays.
+// Mark the item done AT THE SOURCE, then close the note. A connector without
+// done() (read-only, e.g. calendars) just dismisses. On failure the note
+// stays and note:data resets the renderer's pending state.
 ipcMain.on('note:done', async (e, id) => {
   const n = store.notes[id];
   if (!n) return;
-  const fail = (message, detail) => {
-    dialog.showMessageBox({ type: 'error', message, detail: String(detail) });
-    if (!e.sender.isDestroyed()) e.sender.send('note:data', n);
-  };
-  if (n.source === 'sticks') {
-    try { await closeSticksTask(dbConfig('sticks'), n.sticksTaskId); }
-    catch (err) { fail('Could not close the task in Sticks', err); return; }
-  } else if (n.source === 'commit') {
-    try { await fulfillCommitment(dbConfig('commit'), n.commitId, n.commitText); }
-    catch (err) { fail('Could not fulfill the commitment', err); return; }
-  } else if (n.source === 'feed') {
-    try { await dismissAgentFeedItem(dbConfig('feed'), n.feedIds || n.feedId); }
-    catch (err) { fail('Could not dismiss the feed item', err); return; }
-  } else if (n.source === 'tax') {
-    if (!n.dataFile) {
-      fail('Dropbox canonical deadlines.json is unreachable.', 'The SSD copy is a read-only mirror, so the item was not marked done at the source. The note stays until Dropbox is back.');
-      return;
-    }
+  const c = registry.byKey.get(n.source);
+  if (c?.done) {
     try {
-      const doc = JSON.parse(fs.readFileSync(n.dataFile, 'utf8'));
-      const item = (doc.items || []).find(i => i.id === n.taxItemId);
-      if (!item) throw new Error(`item ${n.taxItemId} not found`);
-      item.done = true;
-      item.note = `[closed ${todayPT()} by Justin via Stickies] ` + (item.note || '');
-      fs.writeFileSync(n.dataFile, JSON.stringify(doc, null, 2) + '\n');
+      await c.done(n, cfgFor(c), { store, todayLocal });
     } catch (err) {
-      fail('Could not update deadlines.json', err);
+      dialog.showMessageBox({ type: 'error', message: `Could not mark this done in ${c.label}`, detail: String(err?.message || err) });
+      if (!e.sender.isDestroyed()) e.sender.send('note:data', forRenderer(n));
       return;
-    }
-  } else if (n.source === 'primer' || n.source === 'kit') {
-    store.addCompleted(n.text);
-    // Best-effort strikethrough in today's file; suppression above is what
-    // actually keeps it off the board.
-    if (n.raw && n.sourceFile) {
-      try {
-        const content = fs.readFileSync(n.sourceFile, 'utf8');
-        if (content.includes(n.raw)) {
-          const struck = n.raw.replace(/^([-*]\s+|\d+\.\s+)?(.*)$/s, (m, p, rest) => `${p || ''}~~${rest}~~ ✅`);
-          fs.writeFileSync(n.sourceFile, content.replace(n.raw, struck));
-        }
-      } catch { /* strikethrough is cosmetic; ignore */ }
     }
   }
   store.dismiss(id);
@@ -477,20 +541,49 @@ ipcMain.on('note:done', async (e, id) => {
   buildTray();
 });
 
+registerSettingsIpc({
+  getStore: () => store,
+  getRegistry: () => registry,
+  connectorEnabled,
+  cfgFor,
+  onSaved: ({ connectorsChanged }) => {
+    if (connectorsChanged) reloadConnectors();
+    scheduleRefresh();
+    refresh();
+  },
+  ctx: () => ({ store, todayLocal }),
+});
+
 // ---- lifecycle ----
 
-// Second launches (login item re-fires, manual open while running) exit
-// quietly instead of fighting the live instance.
+// A separate profile for testing next to a running copy.
+if (process.env.STICKIES_USER_DATA) app.setPath('userData', process.env.STICKIES_USER_DATA);
+
+// Second launches (login item re-fires, manual open while running) hand off
+// to the live instance instead of fighting it.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
+} else {
+  app.on('second-instance', () => openSettings());
 }
+
+if (process.platform === 'win32') app.setAppUserModelId('app.lfiq.stickies');
 
 app.whenReady().then(() => {
   if (app.dock) app.dock.hide(); // tray-only utility, no Dock icon
   store = new Store(app.getPath('userData'));
+  reloadConnectors();
+  migrateSettings();
+  buildTray();
   refresh();
-  setInterval(refresh, config.refreshMinutes * 60 * 1000);
+  scheduleRefresh();
   guard.start();
+  // First run with nothing connected: open Settings so the app isn't silent.
+  const anyEnabled = registry.list.some(c => c.key !== 'manual' && connectorEnabled(c));
+  if (!anyEnabled && !settings().welcomed) {
+    updateSetting('welcomed', true);
+    openSettings();
+  }
   // Monitor unplugged/rearranged → repack the column on the new geometry.
   screen.on('display-added', () => column.scheduleLayout());
   screen.on('display-removed', () => column.scheduleLayout());

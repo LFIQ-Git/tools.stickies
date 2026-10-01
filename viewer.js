@@ -7,7 +7,7 @@ const path = require('path');
 const { marked } = require('marked');
 
 const CSS = `
-  body{font:15px/1.6 -apple-system,"SF Pro Text",Helvetica,sans-serif;color:#24292f;background:#fff;
+  body{font:15px/1.6 -apple-system,"SF Pro Text","Segoe UI",Helvetica,sans-serif;color:#24292f;background:#fff;
     max-width:780px;margin:0 auto;padding:32px 40px 80px}
   h1,h2,h3{line-height:1.25;margin:1.2em 0 .5em;padding-bottom:.25em}
   h1{font-size:1.7em;border-bottom:1px solid #d8dee4}h2{font-size:1.3em;border-bottom:1px solid #d8dee4}h3{font-size:1.1em}
@@ -45,7 +45,7 @@ function openViewer(file) {
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
   <title>${esc(path.basename(file))}</title><style>${CSS}</style></head>
   <body><div class="src">${esc(file)}</div>${body}</body></html>`;
-  const win = new BrowserWindow({ width: 820, height: 900, title: path.basename(file) });
+  const win = new BrowserWindow({ width: 820, height: 900, title: path.basename(file), autoHideMenuBar: true });
   win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
 }
 

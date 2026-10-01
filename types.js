@@ -7,19 +7,25 @@
  * the store keyed by `id`.
  *
  * @typedef {Object} Note
- * @property {string} id            Stable identity. Formats: `tax:<item-id>`,
- *   `sticks:<task-id>`, `commit:<uuid>`, `feed:<group-hash>:<date>`, `cal:<date>:<hash>`,
- *   `primer:<date>:<hash>`, `kit:<date>:<section>:<hash>`, `manual:<ts>`.
+ * @property {string} id            Stable identity, prefixed with the connector
+ *   key. Built-ins: `ics:<date>:<hash>`, `todoist:<task-id>`, `reminders:<id>`,
+ *   `md:<file-hash>:<text-hash>`, `todotxt:<line-hash>`, `manual:<ts>`. Private
+ *   connectors: `tax:<item-id>`, `sticks:<task-id>`, `commit:<uuid>`,
+ *   `feed:<group-hash>:<date>`, `cal:<date>:<hash>`, `primer:<date>:<hash>`,
+ *   `kit:<date>:<section>:<hash>`.
  *   Dismissals key off this, so stability decides whether a close sticks.
- * @property {'tax'|'cal'|'sticks'|'commit'|'feed'|'primer'|'kit'|'manual'} source
+ * @property {string} source        Connector key (see connectors/index.js).
  * @property {string} text          Full statement shown when expanded.
  * @property {string} [summary]     Collapsed face text; derived client-side
  *   for manual/edited notes.
- * @property {?string} deadline     ISO date (YYYY-MM-DD, Pacific) or null.
+ * @property {?string} deadline     Local calendar date (YYYY-MM-DD) or null.
  * @property {?string} [kind]       Tax only: 'hard' | 'asap' | 'overdue' —
  *   drives the PAST DUE / ASAP chip when deadline is null.
  * @property {?string} sourceFile   File opened by the source chip (markdown
- *   viewer), or null when the source has no file (DB-backed feeds).
+ *   viewer), or null when the source has no file.
+ * @property {string} [sourceUrl]   https URL the chip opens instead (Todoist).
+ * @property {string} [externalId]  The item's id at the source (Todoist, Reminders).
+ * @property {number} [sortKey]     Order within a source (calendar start time).
  * @property {?string} [dataFile]   Tax only: the WRITABLE canonical
  *   deadlines.json; null when only the read-only mirror was reachable.
  * @property {string} [taxItemId]   Tax only: item id inside deadlines.json.
@@ -29,8 +35,8 @@
  *   the us/them twin row.
  * @property {string[]} [feedIds]   Feed only: every agent_feed row id behind
  *   the card (repeating alerts group into one), all dismissed together.
- * @property {string} [raw]         Primer/kit only: the raw source line, for
- *   the strikethrough-on-done edit.
+ * @property {string} [raw]         File-backed sources: the exact source line,
+ *   matched again on ✓ so only that line is changed.
  * @property {string} createdDate   ISO date the note first appeared.
  * @property {{x: number, y: number}} [pos]  Last window position.
  * @property {boolean} [pinned]     false = sent to background. Default true.

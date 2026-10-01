@@ -1,13 +1,11 @@
-// Pulls to-do items out of the three routine surfaces:
+// Justin's routine sources (private; never packaged). Pulls to-do items out of:
 //   tax    — deadlines.json (Dropbox canonical, SSD mirror fallback)
 //   primer — today's daily primer markdown (PKM/primers)
 //   kit    — today's Kit morning brief inside the Obsidian daily note (PKM/daily)
 // Returns plain note objects; main.js merges them into the store.
 const fs = require('fs');
 const crypto = require('crypto');
-const { todayPT } = require('./ingest-helpers');
-const { ingestSticks, ingestCommitments, ingestAgentFeed } = require('./sticks');
-const { ingestCalendar } = require('./calendar');
+const { todayPT } = require('./helpers');
 
 function hash(s) {
   return crypto.createHash('sha1').update(s).digest('hex').slice(0, 10);
@@ -195,30 +193,4 @@ function ingestKit(cfg) {
   return { notes };
 }
 
-const SOURCES = {
-  tax:    { label: 'Tax deadlines',            fn: ingestTax },
-  cal:    { label: "Today's calendar",         fn: ingestCalendar },
-  sticks: { label: 'Sticks needs-attention',   fn: ingestSticks },
-  commit: { label: 'Commitments',              fn: ingestCommitments },
-  feed:   { label: 'Agent feed escalations',   fn: ingestAgentFeed },
-  primer: { label: 'Your Daily Primer',        fn: ingestPrimer },
-  kit:    { label: 'Company Morning Brief',    fn: ingestKit },
-};
-
-// enabled: map of source key -> bool (missing = enabled).
-// Sources run concurrently — three of them are network reads (Neon, Graph)
-// and serializing them was a pointless waterfall. Order of the result is
-// re-imposed from SOURCES so downstream dedupe stays deterministic.
-async function ingestAll(config, enabled = {}) {
-  const keys = Object.keys(SOURCES).filter(k => enabled[k] !== false);
-  const results = await Promise.all(keys.map(k => SOURCES[k].fn(config[k])));
-  const notes = [];
-  const errors = [];
-  keys.forEach((k, i) => {
-    notes.push(...results[i].notes);
-    if (results[i].error) errors.push(`${k}: ${results[i].error}`);
-  });
-  return { notes, errors };
-}
-
-module.exports = { ingestAll, daysUntil, todayPT, SOURCES, clip, stripMd, summarize };
+module.exports = { ingestTax, ingestPrimer, ingestKit, daysUntil, todayPT, clip, stripMd, summarize };

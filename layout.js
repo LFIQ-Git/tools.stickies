@@ -34,7 +34,7 @@ function createColumn({ note: NOTE, wins, notesOrdered }) {
         webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true },
       });
       win.setAlwaysOnTop(true, 'screen-saver', 1);
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      if (process.platform === 'darwin') win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       win.loadFile(path.join(__dirname, 'arrow.html'), { query: { dir } });
       return win;
     };

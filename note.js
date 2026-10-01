@@ -1,15 +1,5 @@
-const COLORS = {
-  tax:    '#FFCC94',
-  cal:    '#E9E9E9',
-  sticks: '#E4CCF7',
-  commit: '#BFEBDD',
-  feed:   '#F6C4C4',
-  primer: '#FFF9A6',
-  kit:    '#BFE0FF',
-  manual: '#C9F2C7',
-};
-const LABELS = { tax: 'Tax', cal: 'Cal', sticks: 'Sticks', commit: 'Commit', feed: 'Alert', primer: 'Primer', kit: 'Kit', manual: 'Note' };
-
+// Card color, chip text and done capability come from the note's connector
+// (main.js forRenderer).
 let note = null;
 let expanded = false;
 
@@ -18,7 +8,7 @@ const card = $('card'), sourceEl = $('source'), deadlineEl = $('deadline'),
       dateInput = $('dateInput'), doneBtn = $('done'), pinBtn = $('pin'),
       closeBtn = $('close'), textEl = $('text'), expandBtn = $('expand');
 
-// Fallback summarizer for manual/edited notes (mirrors ingest.js).
+// Fallback summarizer for manual/edited notes (mirrors connectors/util.js).
 function summarize(t) {
   if (t.length <= 90) return t;
   const boundaries = [];
@@ -37,10 +27,10 @@ function summaryOf() {
 
 function fmtDeadline(iso) {
   if (!iso) return { label: '+ date', cls: '' };
-  const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) + 'T00:00:00');
+  const today = new Date(new Date().toLocaleDateString('en-CA') + 'T00:00:00');
   const due = new Date(iso + 'T00:00:00');
   const days = Math.round((due - today) / 86400000);
-  const short = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const short = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   if (days < 0) return { label: `OVERDUE ${-days}d`, cls: 'overdue' };
   if (days === 0) return { label: 'Today', cls: 'today' };
   if (days === 1) return { label: 'Tomorrow', cls: 'tomorrow' };
@@ -48,10 +38,13 @@ function fmtDeadline(iso) {
 }
 
 function render() {
-  document.documentElement.style.setProperty('--paper', COLORS[note.source] || COLORS.manual);
-  sourceEl.textContent = LABELS[note.source] || note.source;
-  sourceEl.classList.toggle('inert', !note.sourceFile);
-  sourceEl.title = note.sourceFile ? 'Open source in markdown viewer' : '';
+  document.documentElement.style.setProperty('--paper', note.color || '#C9F2C7');
+  sourceEl.textContent = note.chip || note.source;
+  sourceEl.classList.toggle('inert', !note.hasSource);
+  sourceEl.title = note.sourceUrl ? 'Open in the source app' : note.sourceFile ? 'Open the source file' : '';
+  const doneTitle = note.canDone && note.source !== 'manual' ? 'Mark done at source and close' : 'Done: close this card';
+  doneBtn.title = doneTitle;
+  doneBtn.setAttribute('aria-label', doneTitle);
 
   if (note.deadline == null && note.kind) {
     deadlineEl.textContent = note.kind === 'overdue' ? 'PAST DUE' : 'ASAP';
@@ -146,7 +139,7 @@ pinBtn.addEventListener('click', () => {
   render();
 });
 closeBtn.addEventListener('click', () => stickies.close(note.id));
-sourceEl.addEventListener('click', () => { if (note.sourceFile) stickies.openSource(note.id); });
+sourceEl.addEventListener('click', () => { if (note.hasSource) stickies.openSource(note.id); });
 
 // Wheel anywhere on a card scrolls the whole column — unless the card's own
 // text is clamped and can still scroll in that direction, in which case the

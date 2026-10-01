@@ -1,0 +1,41 @@
+{
+  "db": {
+    "keychainService": "com.justinsato.pkm.database_url",
+    "envFile": "/Volumes/minibase/justinsato/Projects/ACTIVE/2 Apps/brick.keystone/.env.local"
+  },
+  "tax": {
+    "paths": [
+      "/Users/justinsato/Library/CloudStorage/Dropbox-LFI/Leftfieldinv Team Folder/LFI/LFI Corp/Tax/Left Field Investments LLC/_Action-Items/deadlines.json",
+      "/Volumes/minibase/justinsato/Projects/ACTIVE/4 Admin/accounting/Taxes/_Action-Items/deadlines.json"
+    ],
+    "includeDueWithinDays": 14
+  },
+  "primer": {
+    "dir": "/Volumes/minibase/justinsato/Projects/ACTIVE/3 Living/pkm/primers"
+  },
+  "kit": {
+    "dir": "/Volumes/minibase/justinsato/Projects/ACTIVE/3 Living/pkm/daily"
+  },
+  "sticks": {
+    "minPriority": 90,
+    "overdueGraceDays": 7,
+    "dueWithinDays": 3,
+    "cap": 8
+  },
+  "commit": {
+    "overdueGraceDays": 14,
+    "dueWithinDays": 7,
+    "cap": 8
+  },
+  "feed": {
+    "maxAgeDays": 3,
+    "cap": 6,
+    "excludeTypes": [
+      "CRON_ERROR",
+      "CRON_WARNING"
+    ]
+  },
+  "cal": {
+    "user": "justin@leftfieldinv.com"
+  }
+}

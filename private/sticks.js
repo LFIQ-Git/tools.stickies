@@ -6,7 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { Client } = require('pg');
-const { todayPT } = require('./ingest-helpers');
+const { todayPT } = require('./helpers');
 
 let cachedUrl = null;
 
