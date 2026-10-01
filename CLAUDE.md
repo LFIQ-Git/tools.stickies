@@ -1,7 +1,7 @@
 # stickies — always-on-top to-do notes (Mac + Windows)
 
 Electron tray app that floats sticky notes over every app, one card per
-to-do, pulled from connectors. Distributed as installers at
+to-do, pulled from connectors. Repo: LFIQ-Git/tools.stickies (private). Distributed as installers at
 **https://stickies.lfiq.app** (Worker `stickies-downloads`, installers in R2
 bucket `stickies-releases`, both on the Left Field Investments account; the
 hostname sits behind the `*.lfiq.app` Access policy). Listed on the launcher
@@ -20,8 +20,8 @@ cd site && npx wrangler deploy   # only when site/src changes
 
 Bump `version` in package.json before `npm run release`; keys are versioned
 (`v<version>/...`) and the page reads `latest.json`, so a release needs no
-Worker deploy. Installers are unsigned (no Apple Developer ID / Windows code
-signing cert): Mac users go through Privacy & Security → Open Anyway, Windows
+Worker deploy. Installers stay unsigned by decision (2026-10-01: no Apple
+Developer ID or Windows code signing cert): Mac users go through Privacy & Security → Open Anyway, Windows
 users through SmartScreen → Run anyway. The download page says so.
 
 Locally Justin runs it from source via `./start.sh` (tray-only, 🗒 in the menu
