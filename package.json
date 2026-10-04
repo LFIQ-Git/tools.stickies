@@ -47,6 +47,7 @@
       "layout.js",
       "guard.js",
       "viewer.js",
+      "navguard.js",
       "settings.js",
       "settings.html",
       "settings-page.js",
