@@ -6,7 +6,7 @@ Found 2026-10-03 at commit 3291345. Decisions were made under the 2026-10-02 fle
 1. **No navigation or new-window guard on any renderer.** `viewer.js` loads source Markdown with `marked`; a link in that file navigates the viewer window itself to any site, and no window sets `setWindowOpenHandler` or a `will-navigate` handler (`grep` finds none). Fix: one `web-contents-created` handler in `main.js` that denies `window.open`, blocks navigation away from the app's own pages, and sends `https:` links to the default browser. **Approved.**
 
 ## Broken promise
-None found. The score loop (`app-score-loop.state.json`) reached 99/100 and its remaining deduction is an improvement, listed below.
+None found. The score loop (`docs/lfdev/score/app-score-loop.state.json`) reached 99/100 and its remaining deduction is an improvement, listed below.
 
 ## Missing guardrail
 2. **No CI.** No `.github/workflows/`. Fix: a workflow that runs `npm ci` and `npm test` on pull requests and pushes to `main`, with the Electron binary download skipped. **Approved.**
@@ -18,7 +18,7 @@ None found. The score loop (`app-score-loop.state.json`) reached 99/100 and its 
 ## Improvement
 7. Keyboard users cannot move focus between cards (`note.js`; last score-loop deduction). Later.
 8. No lint or typecheck. Later; the code is plain CommonJS with JSDoc types.
-9. Score-loop artifacts (`app-score-loop.state.json`, `scorecard-*.json`) sit at the repo root. Move them under `docs/lfdev/score/` during clean. **Approved (finish).**
+9. Score-loop artifacts (`docs/lfdev/score/app-score-loop.state.json`, `scorecard-*.json`) sit at the repo root. Move them under `docs/lfdev/score/` during clean. **Approved (finish).**
 10. The viewer gives no on-screen message when a source file cannot be read (`viewer.js` logs only). Later.
 
 ## Deferred to owner

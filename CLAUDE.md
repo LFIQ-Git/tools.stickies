@@ -118,7 +118,7 @@ never an IDE; non-md sources fall back to the OS default app.
 encryption · `layout.js` column engine + step arrows · `guard.js` macOS edge
 guard · `viewer.js` markdown viewer · `store.js` persistence · `types.js` Note
 typedefs · `note.html/js` card renderer · `arrow.html` step arrows ·
-`preload*.js` IPC bridges · `config.json` geometry + refresh default ·
+`preload*.js` IPC bridges · `config.json` geometry + refresh default · `navguard.js` blocks renderer navigation and new windows (https links go to the browser) ·
 `private/` Justin's connectors (never packaged) · `site/` download Worker ·
 `scripts/release.sh` publish · `scripts/make-icons.py` icons · `test/` +
 `private/*.test.js` (node:test).

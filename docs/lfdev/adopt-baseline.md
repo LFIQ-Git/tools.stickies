@@ -3,7 +3,7 @@
 - Date: 2026-10-03
 - Commit: 3291345 (`main`)
 - Checks: `npm test` 32 pass, 0 fail. No lint, typecheck or build gate configured. `npm audit --omit=dev`: 0 vulnerabilities.
-- Prior work: score loop from 78 to 99 over three rounds (`app-score-loop.state.json`).
+- Prior work: score loop from 78 to 99 over three rounds (`docs/lfdev/score/app-score-loop.state.json`).
 
 ## Finish-phase items already met
 - Tests for connectors, store and fuzzy matching (`test/`, `private/private.test.js`).
