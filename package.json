@@ -1,6 +1,6 @@
 {
   "name": "stickies",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Always-on-top sticky notes for today's to-dos, pulled from your calendar, Todoist, Apple Reminders, Markdown checklists and todo.txt.",
   "main": "main.js",
   "scripts": {
@@ -47,6 +47,7 @@
       "layout.js",
       "guard.js",
       "viewer.js",
+      "navguard.js",
       "settings.js",
       "settings.html",
       "settings-page.js",

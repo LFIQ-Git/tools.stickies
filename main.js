@@ -12,6 +12,7 @@ const { createColumn } = require('./layout');
 const { createGuard } = require('./guard');
 const { openViewer } = require('./viewer');
 const { openSettings, registerSettingsIpc } = require('./settings');
+const { installNavGuard } = require('./navguard');
 const config = require('./config.json');
 
 const IS_MAC = process.platform === 'darwin';
@@ -568,6 +569,8 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 if (process.platform === 'win32') app.setAppUserModelId('app.lfiq.stickies');
+
+installNavGuard(app, shell);
 
 app.whenReady().then(() => {
   if (app.dock) app.dock.hide(); // tray-only utility, no Dock icon
