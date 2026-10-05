@@ -12,7 +12,7 @@ const { createColumn } = require('./layout');
 const { createGuard } = require('./guard');
 const { openViewer } = require('./viewer');
 const { openSettings, registerSettingsIpc } = require('./settings');
-const { installNavGuard } = require('./navguard');
+const { installNavGuard, openExternalSafe, ABOUT_LINK } = require('./navguard');
 const config = require('./config.json');
 
 const IS_MAC = process.platform === 'darwin';
@@ -460,6 +460,7 @@ function buildTray() {
   template.push(
     { label: 'Settings…', click: () => openSettings() },
     { label: 'How Stickies works', click: () => openViewer(path.join(__dirname, 'OVERVIEW.md')) },
+    { label: ABOUT_LINK.label, click: () => openExternalSafe(shell, ABOUT_LINK.url) },
     { label: `Quit Stickies${app.isPackaged ? '' : ' (dev)'}`, click: () => app.quit() },
   );
   tray.setContextMenu(Menu.buildFromTemplate(template));

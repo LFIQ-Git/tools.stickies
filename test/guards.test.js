@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
 
-const { navTarget } = require('../navguard');
+const { navTarget, openExternalSafe, ABOUT_LINK } = require('../navguard');
 const pkg = require('../package.json');
 
 test('navTarget sends https links to the browser', () => {
@@ -16,6 +16,18 @@ test('navTarget blocks everything else a renderer tries to open', () => {
     'data:text/html,hi', 'mailto:a@b.c', 'not a url', '', undefined]) {
     assert.strictEqual(navTarget(url), 'block', String(url));
   }
+});
+
+test('About Left Field IQ tray item opens the About page in the browser', () => {
+  assert.strictEqual(ABOUT_LINK.label, 'About Left Field IQ');
+  assert.strictEqual(ABOUT_LINK.url, 'https://leftfieldiq.com/about');
+  const opened = [];
+  const shell = { openExternal: (u) => opened.push(u) };
+  assert.strictEqual(openExternalSafe(shell, ABOUT_LINK.url), true);
+  assert.strictEqual(openExternalSafe(shell, 'file:///etc/passwd'), false);
+  assert.deepStrictEqual(opened, ['https://leftfieldiq.com/about']);
+  const main = require('fs').readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  assert.match(main, /label: ABOUT_LINK\.label, click: \(\) => openExternalSafe\(shell, ABOUT_LINK\.url\)/);
 });
 
 test('build.files is an explicit allowlist that never ships private/', () => {
