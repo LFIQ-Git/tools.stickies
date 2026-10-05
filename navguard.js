@@ -14,6 +14,21 @@ function navTarget(url) {
   return u.protocol === 'https:' ? 'external' : 'block';
 }
 
+/** Tray menu link to the Left Field IQ About page, opened in the default browser. */
+const ABOUT_LINK = Object.freeze({ label: 'About Left Field IQ', url: 'https://leftfieldiq.com/about' });
+
+/**
+ * Open a URL in the default browser only if the navigation policy allows it.
+ * @param {import('electron').Shell} shell
+ * @param {string} url
+ * @returns {boolean} whether the URL was handed to the browser
+ */
+function openExternalSafe(shell, url) {
+  if (navTarget(url) !== 'external') return false;
+  shell.openExternal(url);
+  return true;
+}
+
 /**
  * Apply the policy to every web contents the app creates.
  * @param {import('electron').App} app
@@ -32,4 +47,4 @@ function installNavGuard(app, shell) {
   });
 }
 
-module.exports = { navTarget, installNavGuard };
+module.exports = { navTarget, installNavGuard, openExternalSafe, ABOUT_LINK };
