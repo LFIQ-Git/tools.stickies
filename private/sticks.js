@@ -1,6 +1,6 @@
-// Sticks needs-attention source. Reads the SAME live store Sticks (and Kit's
+// Remy needs-attention source. Reads the SAME live store Remy (and Kit's
 // priority stack) use: items.tasks in Neon. "Needs attention" = open tasks
-// that are high-priority or dated near today, ranked the way Sticks ranks
+// that are high-priority or dated near today, ranked the way Remy ranks
 // them (priority_score desc). Marking done here closes the task for real.
 const fs = require('fs');
 const crypto = require('crypto');
@@ -98,7 +98,7 @@ async function ingestSticks(cfg) {
   }
 }
 
-// Close the task in the live store — same effect as completing it in Sticks.
+// Close the task in the live store — same effect as completing it in Remy.
 async function closeSticksTask(cfg, taskId) {
   await withClient(cfg, client =>
     client.query(

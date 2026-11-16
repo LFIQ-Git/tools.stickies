@@ -29,7 +29,7 @@
  * @property {?string} [dataFile]   Tax only: the WRITABLE canonical
  *   deadlines.json; null when only the read-only mirror was reachable.
  * @property {string} [taxItemId]   Tax only: item id inside deadlines.json.
- * @property {string} [sticksTaskId] Sticks only: items.tasks row id.
+ * @property {string} [sticksTaskId] Remy only: items.tasks row id.
  * @property {string} [commitId]    Commit only: items.commitments row id.
  * @property {string} [commitText]  Commit only: promise_text, used to close
  *   the us/them twin row.

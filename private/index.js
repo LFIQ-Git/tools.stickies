@@ -1,4 +1,4 @@
-// Justin's private connectors: tax deadlines, the M365 calendar, Sticks tasks,
+// Justin's private connectors: tax deadlines, the M365 calendar, Remy tasks,
 // commitments, the agent feed, the daily primer and the morning brief. They
 // read private paths, Neon and Keychain, so they are excluded from the
 // packaged app (see "build.files" in package.json) and load only when Stickies
@@ -50,9 +50,9 @@ const connectors = [
     ingest: ingestCalendar,
   },
   {
-    key: 'sticks', label: 'Sticks needs-attention', chip: 'Sticks', color: '#E4CCF7', order: 3, defaultEnabled: true, derivative: true,
+    key: 'sticks', label: 'Remy needs-attention', chip: 'Remy', color: '#E4CCF7', order: 3, defaultEnabled: true, derivative: true,
     defaults: db('sticks'),
-    window: { field: 'dueWithinDays', label: 'Sticks tasks', choices: [3, 7, 14, 30], default: config.sticks.dueWithinDays },
+    window: { field: 'dueWithinDays', label: 'Remy tasks', choices: [3, 7, 14, 30], default: config.sticks.dueWithinDays },
     ingest: ingestSticks,
     done: (note, cfg) => closeSticksTask(cfg, note.sticksTaskId),
   },
