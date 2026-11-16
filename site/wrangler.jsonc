@@ -12,5 +12,11 @@
   // R2. scripts/release.sh uploads them and writes latest.json.
   "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "stickies-releases" }],
   "assets": { "directory": "./public", "binding": "ASSETS" },
-  "observability": { "enabled": true }
+  "upload_source_maps": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 1 }
+  }
 }
