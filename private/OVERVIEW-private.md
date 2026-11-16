@@ -27,7 +27,7 @@ back to those sources when you close an item as done.
 | Double-click the text | Edit in place. Edited cards are yours: refresh never overwrites them. |
 | ✓ | **Mark done at the source** and close the card (see per-source behavior below). |
 | 📌 | Send this card to the background (normal window level, slightly dimmed). Click again to pin it back on top. |
-| ✕ | Hide the card only. Touches nothing at the source. Tax/Sticks hides stick; primer/brief cards start fresh each day. |
+| ✕ | Hide the card only. Touches nothing at the source. Tax/Remy hides stick; primer/brief cards start fresh each day. |
 
 ## Keyboard
 
@@ -42,14 +42,14 @@ card. The buttons are also tabbable, with a visible focus ring.
 |------|-------|-----------|-------------------|-------------|
 | TAX | orange | `deadlines.json` in the canonical Dropbox tax tree (SSD mirror as read fallback) | open items due within 14 days, past due, or flagged overdue; the undated ASAP backlog is excluded | sets `"done": true` in the canonical Dropbox file with an audit stamp. Refuses if only the read-only SSD mirror is reachable. |
 | CAL | gray | Microsoft Graph calendar (same app-only LFI credentials Keystone uses) | today's remaining meetings, with time, location, organizer; ended meetings drop off | dismisses only (nothing to correct on a calendar) |
-| STICKS | purple | Neon `items.tasks`, the live store behind Sticks and the brief's priority stack | open tasks due within the last 7 / next 3 days, or priority ≥ 90 without a long-dead due date; your Sticks hide rules apply; capped at 8; deduped against the other sources | closes the task for real (`status: done`), so it leaves Sticks too |
+| REMY | purple | Neon `items.tasks`, the live store behind Remy and the brief's priority stack | open tasks due within the last 7 / next 3 days, or priority ≥ 90 without a long-dead due date; your Remy hide rules apply; capped at 8; deduped against the other sources | closes the task for real (`status: done`), so it leaves Remy too |
 | COMMIT | teal | Neon `items.commitments`, the live commitment store | unfulfilled commitments due within the last 14 / next 7 days, capped at 8; us/them twin rows collapse into one card | fulfills the commitment AND its twin row, so a one-sided close can't fake an aging open loop |
 | ALERT | salmon | Neon `agent_feed` | pending/unread escalations from the last 3 days. A repeating alert (a failing cron, the daily reconcile digest that re-titles itself each run) shows as ONE card marked `(N×)`, not N cards. Cron failure/warning rows are excluded by default — flip `feed.excludeTypes` in `config.json` to see them. Capped at 6, then deduped against the other sources | marks every row behind the card DISMISSED, so it does not come back |
 | PRIMER | yellow | Your Daily Primer (6:14 AM, `PKM/primers/`) | The One Thing + each Need to Do Today item | strikes the line in today's file and suppresses matching items from future days |
 | KIT | blue | Company Morning Brief (7:03 AM, `PKM/daily/`) | each Today's Board bullet + each Deadlines This Week bullet | same as Primer: strikethrough + suppression |
 | NOTE | green | you (tray → New note) | manual | just closes |
 
-Duplicates across feeds (the same IRS payment in Tax, Sticks, and the brief)
+Duplicates across feeds (the same IRS payment in Tax, Remy, and the brief)
 are fuzzy-matched and shown once. Suppression from ✓ is also fuzzy, so
 "3 days overdue" still matches tomorrow's "4 days overdue".
 
@@ -59,7 +59,7 @@ are fuzzy-matched and shown once. Suppression from ✓ is also fuzzy, so
 - **Sources** — toggle any feed on or off. Toggling off removes its cards; manual and edited cards stay.
 - **New note** — a blank green post-it in edit mode.
 - **Date filter** — cap how far ahead the board looks, measured in days ahead: Today + past due only, 1/3/7/14/30 days, or No limit. Past due and today always show; undated cards (alerts, ASAP items, work-order clusters) always show because there is no date to filter on. Display-only: nothing is dismissed, widening the filter brings cards back.
-- **Source look-ahead** — how far ahead each feed even FETCHES, shown with its current value inline (Tax deadlines, Sticks tasks, Commitments, plus Alerts max age looking backward). These are the ceilings the Date filter works under: "No limit" shows everything ingested, so pair a 30-day date filter with a 30-day tax window. Changes persist, override the config.json defaults (marked "(default)" in each list), and re-ingest immediately. Narrowing a window retro-removes cards beyond it on the next refresh; cards you've edited stay. Alert cards, having no deadline, stay on the board once ingested until closed with ✓/✕ even if the age window later narrows.
+- **Source look-ahead** — how far ahead each feed even FETCHES, shown with its current value inline (Tax deadlines, Remy tasks, Commitments, plus Alerts max age looking backward). These are the ceilings the Date filter works under: "No limit" shows everything ingested, so pair a 30-day date filter with a 30-day tax window. Changes persist, override the config.json defaults (marked "(default)" in each list), and re-ingest immediately. Narrowing a window retro-removes cards beyond it on the next refresh; cards you've edited stay. Alert cards, having no deadline, stay on the board once ingested until closed with ✓/✕ even if the age window later narrows.
 - **Pin all on top / Send all to background** — the whole board at once.
 - **Restack column** — pull dragged cards back into the tight column and scroll to top.
 - **Snap stops at column (edge guard)** — while pinned notes are visible, a window you snap or maximize gets its right edge clamped to the column's inside edge instead of sliding under the notes. Uncheck to let windows go under. Needs Accessibility access for Electron; the menu warns if that's missing.
