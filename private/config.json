@@ -16,7 +16,7 @@
   "kit": {
     "dir": "/Volumes/minibase/justinsato/Projects/ACTIVE/3 Living/pkm/daily"
   },
-  "sticks": {
+  "remy": {
     "minPriority": 90,
     "overdueGraceDays": 7,
     "dueWithinDays": 3,

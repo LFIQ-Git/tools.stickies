@@ -7,7 +7,7 @@
 **Core purpose.** Keep today's open to-dos visible over every other window, so nothing due today is missed.
 
 **Users.**
-- Justin, running from a source checkout with private connectors for tax deadlines, PKM primer and morning brief, Sticks tasks, commitments, the agent feed and the M365 calendar (`private/`, `CLAUDE.md`).
+- Justin, running from a source checkout with private connectors for tax deadlines, PKM primer and morning brief, Remy tasks, commitments, the agent feed and the M365 calendar (`private/`, `CLAUDE.md`).
 - Anyone who installs the unsigned Mac or Windows build from https://stickies.lfiq.app and connects calendar feeds, Todoist, Apple Reminders, Markdown checklists or todo.txt (`connectors/`, `site/`). Inferred: the audience is Justin's own team and contacts, since the site sits behind the `*.lfiq.app` Access policy.
 
 **Jobs.**

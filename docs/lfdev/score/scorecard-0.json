@@ -9,7 +9,7 @@
       "max": 25,
       "deductions": [
         { "points": 1, "location": "main.js:153 createNoteWindow", "reason": "BrowserWindow lacks acceptFirstMouse; first click on an inactive card only activates the window, swallowing button presses (observed live: expand clicks required a second click)." },
-        { "points": 1, "location": "sticks.js:27 databaseUrl / pg connection string", "reason": "Every refresh spams the log with the pg sslmode deprecation warning; main paths are not clean-log." },
+        { "points": 1, "location": "remy.js:27 databaseUrl / pg connection string", "reason": "Every refresh spams the log with the pg sslmode deprecation warning; main paths are not clean-log." },
         { "points": 1, "location": "main.js:488 note:height clamp + note.html #text", "reason": "Cards clamp at maxHeight 300 with overflow hidden; expanded text longer than the window is silently truncated with no scroll affordance." },
         { "points": 1, "location": "main.js:634 app.whenReady", "reason": "No screen.on('display-added'/'display-removed'/'display-metrics-changed') listeners; unplugging or rearranging monitors strands the column until an unrelated relayout fires." }
       ]
@@ -41,7 +41,7 @@
       "deductions": [
         { "points": 2, "location": "main.js:117 layoutStack → store.save()", "reason": "Synchronous full-store disk write on every layout pass, including every coalesced wheel tick while scrolling — hot-path sync I/O." },
         { "points": 1, "location": "main.js:392 guardTick", "reason": "Spawns an osascript subprocess every 1.2s all day even when the frontmost window hasn't changed." },
-        { "points": 1, "location": "ingest.js ingestAll; sticks.js withClient", "reason": "The three Neon sources each open/close their own connection and run sequentially — a fetch waterfall that should be parallel." }
+        { "points": 1, "location": "ingest.js ingestAll; remy.js withClient", "reason": "The three Neon sources each open/close their own connection and run sequentially — a fetch waterfall that should be parallel." }
       ]
     },
     {
