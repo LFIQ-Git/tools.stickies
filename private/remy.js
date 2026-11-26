@@ -51,7 +51,7 @@ async function fetchHideRules(client) {
   } catch { return []; }
 }
 
-async function ingestSticks(cfg) {
+async function ingestRemy(cfg) {
   const notes = [];
   try {
     const rows = await withClient(cfg, async client => {
@@ -82,13 +82,13 @@ async function ingestSticks(cfg) {
       const desc = (row.description || '').replace(/\s+/g, ' ').trim();
       const text = desc ? `${row.title} — ${desc}`.slice(0, 300) : row.title;
       notes.push({
-        id: `sticks:${row.id}`,
-        source: 'sticks',
+        id: `remy:${row.id}`,
+        source: 'remy',
         text,
         summary: row.title.length > 90 ? row.title.slice(0, 87) + '…' : row.title,
         deadline: row.due || null,
         sourceFile: null,
-        sticksTaskId: row.id,
+        remyTaskId: row.id,
         createdDate: date,
       });
     }
@@ -99,7 +99,7 @@ async function ingestSticks(cfg) {
 }
 
 // Close the task in the live store — same effect as completing it in Remy.
-async function closeSticksTask(cfg, taskId) {
+async function closeRemyTask(cfg, taskId) {
   await withClient(cfg, client =>
     client.query(
       `UPDATE items.tasks
@@ -276,4 +276,4 @@ async function dismissAgentFeedItem(cfg, feedIds) {
   ));
 }
 
-module.exports = { ingestSticks, closeSticksTask, ingestCommitments, fulfillCommitment, ingestAgentFeed, dismissAgentFeedItem, feedGroupKey, classifyFeedTitle };
+module.exports = { ingestRemy, closeRemyTask, ingestCommitments, fulfillCommitment, ingestAgentFeed, dismissAgentFeedItem, feedGroupKey, classifyFeedTitle };

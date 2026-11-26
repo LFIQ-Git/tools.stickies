@@ -24,7 +24,7 @@ Note windows send `note:ready`, `note:height`, `note:edit`, `note:deadline`, `no
 | reminders | macOS Automation (JXA) | completes reminder | same; macOS only |
 | markdown | file path | ticks the checkbox | same |
 | todotxt | file path | marks line done | same |
-| private: tax, primer, kit, sticks, commit, feed, cal | Keychain `com.justinsato.pkm.database_url`, keystone `.env.local` (`PKM_SECRET_M365_LFI`) | see `CLAUDE.md` | same; loaded only from a source checkout |
+| private: tax, primer, kit, remy, commit, feed, cal | Keychain `com.justinsato.pkm.database_url`, keystone `.env.local` (`PKM_SECRET_M365_LFI`) | see `CLAUDE.md` | same; loaded only from a source checkout |
 
 Connector contract is documented at the top of `connectors/index.js`. Ingest errors are collected and never thrown.
 

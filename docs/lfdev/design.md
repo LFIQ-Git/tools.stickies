@@ -16,7 +16,7 @@ There is no main window. The tray menu (🗒) is the navigation: note count, Ref
 | Download page | `site/src/index.js` | install |
 
 ### Tokens in use
-Card colours come from each connector's `color` (manual `#C9F2C7`, tax orange, primer yellow, kit blue, sticks purple, commit teal, feed salmon, cal gray). Geometry from `config.json`: width 200, min height 72, max height 300, gap 4, edge margin 8. Viewer uses a GitHub-like palette with a dark mode via `prefers-color-scheme`.
+Card colours come from each connector's `color` (manual `#C9F2C7`, tax orange, primer yellow, kit blue, remy purple, commit teal, feed salmon, cal gray). Geometry from `config.json`: width 200, min height 72, max height 300, gap 4, edge margin 8. Viewer uses a GitHub-like palette with a dark mode via `prefers-color-scheme`.
 
 ### Screen states
 | Screen | Empty | Loading | Error | Success | No permission |

@@ -7,7 +7,7 @@
 const fs = require('fs');
 const config = require('./config.json');
 const { ingestTax, ingestPrimer, ingestKit, todayPT } = require('./routines');
-const { ingestSticks, closeSticksTask, ingestCommitments, fulfillCommitment, ingestAgentFeed, dismissAgentFeedItem } = require('./sticks');
+const { ingestRemy, closeRemyTask, ingestCommitments, fulfillCommitment, ingestAgentFeed, dismissAgentFeedItem } = require('./remy');
 const { ingestCalendar } = require('./m365-calendar');
 
 const db = key => ({ ...config.db, ...config[key] });
@@ -50,11 +50,11 @@ const connectors = [
     ingest: ingestCalendar,
   },
   {
-    key: 'sticks', label: 'Remy needs-attention', chip: 'Remy', color: '#E4CCF7', order: 3, defaultEnabled: true, derivative: true,
-    defaults: db('sticks'),
-    window: { field: 'dueWithinDays', label: 'Remy tasks', choices: [3, 7, 14, 30], default: config.sticks.dueWithinDays },
-    ingest: ingestSticks,
-    done: (note, cfg) => closeSticksTask(cfg, note.sticksTaskId),
+    key: 'remy', label: 'Remy needs-attention', chip: 'Remy', color: '#E4CCF7', order: 3, defaultEnabled: true, derivative: true,
+    defaults: db('remy'),
+    window: { field: 'dueWithinDays', label: 'Remy tasks', choices: [3, 7, 14, 30], default: config.remy.dueWithinDays },
+    ingest: ingestRemy,
+    done: (note, cfg) => closeRemyTask(cfg, note.remyTaskId),
   },
   {
     key: 'commit', label: 'Commitments', chip: 'Commit', color: '#BFEBDD', order: 4, defaultEnabled: true, derivative: true,

@@ -21,7 +21,7 @@
             },
             {
               "points": 1,
-              "location": "sticks.js:27 databaseUrl / pg connection string",
+              "location": "remy.js:27 databaseUrl / pg connection string",
               "reason": "Every refresh spams the log with the pg sslmode deprecation warning; main paths are not clean-log."
             },
             {
@@ -97,7 +97,7 @@
             },
             {
               "points": 1,
-              "location": "ingest.js ingestAll; sticks.js withClient",
+              "location": "ingest.js ingestAll; remy.js withClient",
               "reason": "The three Neon sources each open/close their own connection and run sequentially \u2014 a fetch waterfall that should be parallel."
             }
           ]

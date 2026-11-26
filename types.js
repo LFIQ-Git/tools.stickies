@@ -10,7 +10,7 @@
  * @property {string} id            Stable identity, prefixed with the connector
  *   key. Built-ins: `ics:<date>:<hash>`, `todoist:<task-id>`, `reminders:<id>`,
  *   `md:<file-hash>:<text-hash>`, `todotxt:<line-hash>`, `manual:<ts>`. Private
- *   connectors: `tax:<item-id>`, `sticks:<task-id>`, `commit:<uuid>`,
+ *   connectors: `tax:<item-id>`, `remy:<task-id>`, `commit:<uuid>`,
  *   `feed:<group-hash>:<date>`, `cal:<date>:<hash>`, `primer:<date>:<hash>`,
  *   `kit:<date>:<section>:<hash>`.
  *   Dismissals key off this, so stability decides whether a close sticks.
@@ -29,7 +29,7 @@
  * @property {?string} [dataFile]   Tax only: the WRITABLE canonical
  *   deadlines.json; null when only the read-only mirror was reachable.
  * @property {string} [taxItemId]   Tax only: item id inside deadlines.json.
- * @property {string} [sticksTaskId] Remy only: items.tasks row id.
+ * @property {string} [remyTaskId] Remy only: items.tasks row id.
  * @property {string} [commitId]    Commit only: items.commitments row id.
  * @property {string} [commitText]  Commit only: promise_text, used to close
  *   the us/them twin row.

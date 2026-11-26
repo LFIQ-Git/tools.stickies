@@ -44,7 +44,7 @@ test('kit parser extracts board bullets and parses deadline dates', () => {
   fs.writeFileSync(path.join(dir, `${date}.md`), [
     `# ${date}`,
     '',
-    'Company Morning Brief — Test | Sticks',
+    'Company Morning Brief — Test | Remy',
     '',
     "## TODAY'S BOARD",
     '- **Wire the $50K** — promised for today.',
@@ -70,7 +70,7 @@ test('kit parser extracts board bullets and parses deadline dates', () => {
 // ---- agent feed grouping ----
 // Repeating machine alerts must collapse to one card, otherwise a failing cron
 // writes 70 identical stickies and dismissing one leaves 69 to resurface.
-const { feedGroupKey } = require('./sticks');
+const { feedGroupKey } = require('./remy');
 
 test('feedGroupKey collapses repeated cron failures per job', () => {
   assert.strictEqual(
@@ -103,7 +103,7 @@ test('feedGroupKey strips dates and counts but keeps distinct subjects apart', (
 });
 
 test('recurring digests rank below one-off alerts', () => {
-  const { classifyFeedTitle } = require('./sticks');
+  const { classifyFeedTitle } = require('./remy');
   for (const t of ['Daily Reconcile — Aug 30 | 3 calls needed',
                    'Cron failure: m365-graph-pull',
                    'Commitment sweep — archived 4',
